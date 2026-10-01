@@ -4,6 +4,7 @@ import { verifyCasinoSignature } from "../middleware/hmac.js";
 import { launchGame } from "./launchGame.js";
 import { getBalance } from "./getBalance.js";
 import { debit } from "./debit.js";
+import { credit } from "./credit.js";
 
 
 const router = express.Router();
@@ -121,6 +122,41 @@ router.post(
 );
 
 
+//provider -> casino
+router.post(
+  "/credit",
+  verifyCasinoSignature,
+  async (req, res) => {
+    try {
+      const { casinoSessionToken, providerSessionId, 
+        transactionId, roundId, relatedBetTransactionId, amount } = req.body;
+        
+      if (!casinoSessionToken || !providerSessionId || !transactionId || 
+        !roundId || !relatedBetTransactionId || !amount) {
+        return res.status(400).json(
+          { error: "casinoSessionToken, providerSessionId, transactionId, roundId, relatedBetTransactionId and amount are required" }
+        );
+      }
+
+      const result = await credit({
+        casinoSessionToken,
+        providerSessionId,
+        transactionId,
+        roundId,
+        relatedBetTransactionId,
+        amount,
+      });
+      
+      return res.status(200).json(result);
+
+    } catch (error) {
+      console.error("Credit failed: ", error);
+      return res.status(error.status || 500).json({
+        error: error.message || "Credit transaction failed",
+      }); 
+    }
+  }
+);
 
 
 router.post(
