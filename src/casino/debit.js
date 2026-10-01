@@ -42,7 +42,7 @@ export async function debit({casinoSessionToken, providerSessionId,
             
             // If retried an existing transaction then return from db cache
             const existingTransactionResult = await client.query(
-                `SELECT response_cache
+                `SELECT transaction_type, response_cache
                 FROM casino_transactions
                 WHERE external_transaction_id = $1`,
                 [transactionId]
@@ -51,6 +51,14 @@ export async function debit({casinoSessionToken, providerSessionId,
             if (existingTransactionResult.rowCount > 0) {
                 const existingTransaction = existingTransactionResult.rows[0];
                 console.log("Returning cached response of existing transaction:", existingTransaction);
+
+                if (existingTransaction.transaction_type !== "DEBIT") {
+                    const error = new Error(
+                        "Transaction id already used for a different transaction type"
+                    );
+                    error.status = 409;
+                    throw error;
+                }
                 
                 await client.query("ROLLBACK");
 

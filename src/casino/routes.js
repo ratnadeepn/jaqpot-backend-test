@@ -5,6 +5,7 @@ import { launchGame } from "./launchGame.js";
 import { getBalance } from "./getBalance.js";
 import { debit } from "./debit.js";
 import { credit } from "./credit.js";
+import { rollback } from "./rollback.js";
 
 
 const router = express.Router();
@@ -157,6 +158,44 @@ router.post(
     }
   }
 );
+
+
+router.post(
+  "/rollback",
+  verifyCasinoSignature,
+  async (req, res) => {
+    try {
+      const { casinoSessionToken, providerSessionId, 
+        transactionId, roundId, relatedBetTransactionId } = req.body;
+        
+      if (!casinoSessionToken || !providerSessionId || !transactionId || 
+        !roundId || !relatedBetTransactionId) {
+        return res.status(400).json(
+          { 
+            error: "casinoSessionToken, providerSessionId, transactionId, roundId and relatedBetTransactionId are required" 
+          }
+        );
+      }
+
+      const result = await rollback({
+        casinoSessionToken,
+        providerSessionId,
+        transactionId,
+        roundId,
+        relatedBetTransactionId,
+      });
+      
+      return res.status(200).json(result);
+
+    } catch (error) {
+      console.error("Rollback failed: ", error);
+      return res.status(error.status || 500).json({
+        error: error.message || "Rollback transaction failed",
+      }); 
+    }
+  }
+);
+
 
 
 router.post(
