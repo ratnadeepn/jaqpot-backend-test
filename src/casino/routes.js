@@ -3,6 +3,8 @@ import express from "express";
 import { verifyCasinoSignature } from "../middleware/hmac.js";
 import { launchGame } from "./launchGame.js";
 import { getBalance } from "./getBalance.js";
+import { debit } from "./debit.js";
+
 
 const router = express.Router();
 
@@ -81,6 +83,43 @@ router.post(
     }
   }
 );
+
+
+//provider -> casino
+router.post(
+  "/debit",
+  verifyCasinoSignature,
+  async (req, res) => {
+    try {
+      const { casinoSessionToken, providerSessionId, 
+        transactionId, roundId, amount } = req.body;
+
+      if (!casinoSessionToken || !providerSessionId || !transactionId || 
+        !roundId || !amount) {
+        return res.status(400).json(
+          { error: "casinoSessionToken, providerSessionId, transactionId, roundId and amount are required" }
+        );
+      }
+
+      const result = await debit({
+        casinoSessionToken,
+        providerSessionId,
+        transactionId,
+        roundId,
+        amount,
+      });
+      
+      return res.status(200).json(result);
+
+    } catch (error) {
+      console.error("Debit failed: ", error);
+      return res.status(error.status || 500).json({
+        error: error.message || "Debit transaction failed",
+      }); 
+    }
+  }
+);
+
 
 
 
