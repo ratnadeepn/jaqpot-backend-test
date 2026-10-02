@@ -1,6 +1,11 @@
 import { postSignedJson } from "../shared/http.js";
 import pool from "../db/pool.js";
 
+import { createOrGetRound, recordProviderTransaction,
+    addRoundBetAmount, markRoundRolledBack, addRoundPayoutAmount
+ } from "./records.js";
+
+
 // Provider -> Casino http call
 export async function simulateProviderRound({ casinoSessionToken, providerSessionId }) {
     const casinoBaseUrl = "http://localhost:3000/casino";
@@ -39,6 +44,14 @@ export async function simulateProviderRound({ casinoSessionToken, providerSessio
     // debit from casino
     const rollbackRoundId = `SIM-${providerSessionId}-ROUND-A`;
     const rollbackBetTransactionId = `SIM-${providerSessionId}-BET-A`;
+
+    //before actual debit, record/creates durable provider round A - only one
+    const roundA = await createOrGetRound({
+        providerSessionId,
+        roundId: rollbackRoundId
+    });
+    
+
     const debitResponse = await postSignedJson({
         url: `${casinoBaseUrl}/debit`,
         body: {
@@ -51,6 +64,23 @@ export async function simulateProviderRound({ casinoSessionToken, providerSessio
         secret: process.env.CASINO_SECRET,
         signatureHeader: "x-casino-signature",
     });
+
+    //record bet A and casino's response
+    const recordedBetA = await recordProviderTransaction({
+        transactionId: rollbackBetTransactionId,
+        roundDbId: roundA.id,
+        type: 'BET',
+        amount: 1000,
+        casinoResponse: debitResponse
+    });
+
+    if (recordedBetA.inserted){
+        await addRoundBetAmount({
+            roundDbId: roundA.id,
+            amount: 1000
+        });
+    }
+
 
     /* rollback from casino
     since rollback is only allowed for the same round, so simulate immediately after bet/debit
@@ -69,9 +99,32 @@ export async function simulateProviderRound({ casinoSessionToken, providerSessio
         signatureHeader: "x-casino-signature",
     });
 
+    //record this rollback at provider end
+    const recordedRollbackA = await recordProviderTransaction({
+        transactionId: rollbackTransactionId,
+        roundDbId: roundA.id,
+        type: 'ROLLBACK',
+        amount: 1000,
+        casinoResponse: rollbackResponse
+    });
+
+    if (recordedRollbackA.inserted){
+        await markRoundRolledBack({
+            roundDbId: roundA.id
+        });
+    }
+    
+
     //debit for another round
     const payoutRoundId = `SIM-${providerSessionId}-ROUND-B`;
     const payoutBetTransactionId = `SIM-${providerSessionId}-BET-B`;
+
+    //record the round details for round B
+    const roundB = await createOrGetRound({
+        providerSessionId,
+        roundId: payoutRoundId,
+    });
+
     const payoutBetResponse = await postSignedJson({
         url: `${casinoBaseUrl}/debit`,
         body: {
@@ -85,7 +138,23 @@ export async function simulateProviderRound({ casinoSessionToken, providerSessio
         signatureHeader: "x-casino-signature",
     });
 
-    //payout for the above round
+    //record the bet reponse
+    const recordedBetB = await recordProviderTransaction({
+        transactionId: payoutBetTransactionId,
+        roundDbId: roundB.id,
+        type: 'BET',
+        amount: 2000,
+        casinoResponse: payoutBetResponse
+    });
+
+    if (recordedBetB.inserted){
+        await addRoundBetAmount({
+            roundDbId: roundB.id,
+            amount: 2000
+        });
+    }
+
+    //payout for the above round B
     const payoutTransactionId = `SIM-${providerSessionId}-PAYOUT-B`;
     const payoutResponse = await postSignedJson({
         url: `${casinoBaseUrl}/credit`,
@@ -100,6 +169,22 @@ export async function simulateProviderRound({ casinoSessionToken, providerSessio
         secret: process.env.CASINO_SECRET,
         signatureHeader: "x-casino-signature",
     });
+
+    //record payout of round B transaction
+    const recordedPayoutB = await recordProviderTransaction({
+        transactionId: payoutTransactionId,
+        roundDbId: roundB.id,
+        type: 'PAYOUT',
+        amount: 3500,
+        casinoResponse: payoutResponse
+    });
+
+    if (recordedPayoutB.inserted){
+        await addRoundPayoutAmount({
+            roundDbId: roundB.id,
+            amount: 3500
+        });
+    }
 
 
 

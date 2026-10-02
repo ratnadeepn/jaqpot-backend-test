@@ -227,6 +227,7 @@ router.post(
   }
 );
 
+/*
 router.post(
   "/auth-test",
   verifyCasinoSignature,
@@ -238,5 +239,7 @@ router.post(
     });
   }
 );
+
+*/
 
 export default router;
