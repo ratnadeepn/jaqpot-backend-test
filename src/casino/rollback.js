@@ -58,7 +58,7 @@ export async function rollback({ casinoSessionToken, providerSessionId, transact
             if (existingRollbackResult.rowCount > 0) {
                 const existingRollback = existingRollbackResult.rows[0];
 
-                if (existingTransaction.transaction_type !== "ROLLBACK") {
+                if (existingRollback.transaction_type !== "ROLLBACK") {
                     const error = new Error(
                         "Transaction id already used for a different transaction type"
                     );

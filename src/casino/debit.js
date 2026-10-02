@@ -52,7 +52,7 @@ export async function debit({casinoSessionToken, providerSessionId,
                 const existingTransaction = existingTransactionResult.rows[0];
                 console.log("Returning cached response of existing transaction:", existingTransaction);
 
-                if (existingTransaction.transaction_type !== "DEBIT") {
+                if (existingTransaction.transaction_type !== "BET") {
                     const error = new Error(
                         "Transaction id already used for a different transaction type"
                     );

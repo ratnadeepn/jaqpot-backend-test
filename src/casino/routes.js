@@ -6,6 +6,7 @@ import { getBalance } from "./getBalance.js";
 import { debit } from "./debit.js";
 import { credit } from "./credit.js";
 import { rollback } from "./rollback.js";
+import { simulateRound } from "./simulateRound.js";
 
 
 const router = express.Router();
@@ -196,7 +197,35 @@ router.post(
   }
 );
 
+//testing client -> casino
+router.post(
+  "/simulateRound",
+  async (req, res) => {
+    try {
+      const { userId, gameId, currencyCode } = req.body;
 
+      if (!userId || !gameId || !currencyCode) {
+        return res.status(400).json(
+          { error: "userId, gameId and currencyCode are required" }
+        );
+      }
+      
+      const result = await simulateRound({
+        userId,
+        gameId,
+        currencyCode,
+      });
+
+      return res.status(200).json(result);
+
+    } catch (error) {
+      console.error("Casino simulation failed: ", error);
+      return res.status(error.status || 500).json({
+        error: error.message || "Casino simulation failed",
+      });
+    }
+  }
+);
 
 router.post(
   "/auth-test",

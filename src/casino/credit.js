@@ -48,7 +48,7 @@ export async function credit({casinoSessionToken, providerSessionId, transaction
             if (existingTransactionResult.rowCount > 0) {
                 const existingTransaction = existingTransactionResult.rows[0];
 
-                if (existingTransaction.transaction_type !== "CREDIT") {
+                if (existingTransaction.transaction_type !== "PAYOUT") {
                     const error = new Error(
                         "Transaction id already used for a different transaction type"
                     );
