@@ -100,6 +100,7 @@ Launch
 - Duplicate transaction IDs return the original cached response without moving money again.
 - Provider transaction IDs are deterministic within a simulation session, making simulation retries safe.
 - Rollback after payout is rejected; rollback of a missing bet creates a tombstone without changing the balance.
+- Note: for the demo flow, `playable_balance` is used for bets and payouts. The assessment does not define allocation rules between playable and redeemable balances.
 
 
 
